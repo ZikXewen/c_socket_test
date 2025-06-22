@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "socket_utils.h"
 
 int createTCPIpv4Socket() {
@@ -7,6 +9,8 @@ int createTCPIpv4Socket() {
 void createIpv4Address(struct sockaddr_in *addr, char *ip, int port) {
   addr->sin_family = AF_INET;
   addr->sin_port = htons(port); // htons = host to network short (endians)
-  inet_pton(AF_INET, ip,
-            &addr->sin_addr.s_addr); // presentation to network format
+  if (strlen(ip) == 0)
+    addr->sin_addr.s_addr = INADDR_ANY;
+  else
+    inet_pton(AF_INET, ip, &addr->sin_addr.s_addr); // presentation to network format
 }
