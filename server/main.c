@@ -1,5 +1,6 @@
 #include <pthread.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "socket_utils.h"
@@ -11,6 +12,10 @@ struct ClientSocket {
   struct sockaddr_in addr;
   pthread_t tid;
 };
+
+// TODO: use mutex to handle races
+struct ClientSocket sockets[MAX_CLIENTS];
+int accepted = 0;
 
 void threadFn(int fd) {
   char buf[2048];
@@ -26,6 +31,11 @@ void threadFn(int fd) {
     buf[ct] = 0;
 
     printf("%d: %s\n", fd, buf);
+    for (int i = 0; i < accepted; ++i) {
+      if (sockets[i].fd != fd) {
+        send(sockets[i].fd, buf, strlen(buf), 0);
+      }
+    }
   }
   shutdown(fd, SHUT_RDWR);
   close(fd);
@@ -54,9 +64,6 @@ int main() {
     return -1;
   }
   printf("Listening...\n");
-
-  struct ClientSocket sockets[MAX_CLIENTS];
-  int accepted = 0;
 
   while (1) {
     socklen_t sz = sizeof(struct sockaddr_in);

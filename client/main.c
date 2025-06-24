@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +26,25 @@ void trim(char *s) {
   *s = 0;
 }
 
+void threadFn(int fd) {
+  char buf[2048];
+  while (1) {
+    ssize_t ct = recv(fd, buf, 2048, 0);
+    if (ct == 0) {
+      break;
+    }
+    if (ct == -1) {
+      perror("recv");
+      continue;
+    }
+    buf[ct] = 0;
+
+    printf("Recieved: %s\n", buf);
+  }
+  shutdown(fd, SHUT_RDWR);
+  close(fd);
+}
+
 int main() {
   int fd = createTCPIpv4Socket();
   if (fd == -1) {
@@ -41,6 +61,9 @@ int main() {
     return -1;
   }
   printf("Connection Established!\n\n");
+
+  pthread_t tid;
+  pthread_create(&tid, NULL, (void *(*)(void *))threadFn, (void *)(size_t)fd);
 
   char *buf = NULL;
   size_t sz = 0;
